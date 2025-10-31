@@ -24,7 +24,8 @@ import {
   List,
   Files,
   Image as ImageIcon,
-  Mic
+  Mic,
+  PlayCircle
 } from 'lucide-react';
 import Button from './ui/Button';
 import Toast from './ui/Toast';
@@ -143,7 +144,8 @@ export default function FlowBuilder({
   isSaving = false,
   saveButtonLabel = 'Save',
   metadata = null,
-  onMetadataChange = null
+  onMetadataChange = null,
+  onRunBulk = null
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -757,6 +759,17 @@ export default function FlowBuilder({
               className="w-full sm:w-auto justify-center"
             >
               {saveButtonLabel}
+            </Button>
+          )}
+          {typeof onRunBulk === 'function' && (
+            <Button
+              onClick={onRunBulk}
+              variant="secondary"
+              icon={PlayCircle}
+              disabled={isSaving || isExecuting}
+              className="w-full sm:w-auto justify-center"
+            >
+              Bulk run
             </Button>
           )}
           <Button

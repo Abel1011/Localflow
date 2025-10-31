@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import MainLayout from '@/components/MainLayout';
 import FlowBuilder from '@/components/WorkflowBuilder';
@@ -79,6 +79,13 @@ export default function EditFlowPage() {
     }
   };
 
+  const handleOpenBulkRunner = useCallback(() => {
+    if (!Number.isFinite(flowId)) {
+      return;
+    }
+    router.push(`/flows/${flowId}/run`);
+  }, [flowId, router]);
+
   const handleToastClose = () => {
     setToast(null);
   };
@@ -125,6 +132,7 @@ export default function EditFlowPage() {
         onSave={handleSave}
         isSaving={isSaving}
         saveButtonLabel="Save Changes"
+        onRunBulk={handleOpenBulkRunner}
       />
       {toast && (
         <div className="fixed bottom-6 right-6">

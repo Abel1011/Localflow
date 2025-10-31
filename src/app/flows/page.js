@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Toast from '@/components/ui/Toast';
 import { getAllFlows, deleteFlow } from '@/lib/workflowStorage';
-import { Plus, Search, Pencil, Trash2, Play } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Play, Workflow } from 'lucide-react';
 
 const PAGE_SIZE = 6;
 
@@ -100,20 +100,31 @@ export default function FlowsPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-slate-50/40">
-        <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+      <div className="py-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-8">
           <Card gradient className="shadow-xl">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-slate-900">Flow Library</h1>
-                <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
+            <div className="flex items-center gap-4 mb-6">
+              <div 
+                className="flex items-center justify-center w-14 h-14 rounded-2xl shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #0ea5e9 100%)',
+                }}
+              >
+                <Workflow className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-slate-900 mb-1">Flow Library</h1>
+                <p className="text-sm text-slate-600 leading-relaxed">
                   Manage every Flow locally without leaving the browser. Organize, edit, and execute workflows with the same polished experience as the playground tools.
                 </p>
               </div>
-              <Link href="/flows/new" className="inline-flex">
-                <Button icon={Plus} className="w-full justify-center">New Flow</Button>
+              <Link href="/flows/new" className="hidden sm:inline-flex">
+                <Button icon={Plus} className="whitespace-nowrap">New Flow</Button>
               </Link>
             </div>
+            <Link href="/flows/new" className="sm:hidden w-full">
+              <Button icon={Plus} className="w-full justify-center">New Flow</Button>
+            </Link>
           </Card>
 
           <Card className="shadow-xl">
@@ -168,17 +179,17 @@ export default function FlowsPage() {
                         </td>
                         <td className="py-4 pr-4 align-center text-sm text-slate-500">{formatDate(flow.updatedAt)}</td>
                         <td className="py-4 align-top">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
                             <Link
                               href={`/flows/${flow.id}/run`}
-                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-teal-200 text-sm font-semibold text-teal-600 hover:bg-teal-50 transition-colors"
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-teal-200 text-sm font-semibold text-teal-600 hover:bg-teal-50 transition-colors whitespace-nowrap"
                             >
                               <Play className="w-4 h-4" />
                               Bulk run
                             </Link>
                             <Link
                               href={`/flows/${flow.id}/edit`}
-                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-600 hover:border-teal-400 hover:text-teal-600 transition-colors"
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-600 hover:border-teal-400 hover:text-teal-600 transition-colors whitespace-nowrap"
                             >
                               <Pencil className="w-4 h-4" />
                               Edit
@@ -186,7 +197,7 @@ export default function FlowsPage() {
                             <button
                               type="button"
                               onClick={() => handleDelete(flow.id)}
-                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-rose-200 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-rose-200 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors whitespace-nowrap"
                             >
                               <Trash2 className="w-4 h-4" />
                               Delete
@@ -204,21 +215,21 @@ export default function FlowsPage() {
               <div className="text-sm text-slate-500 font-medium">
                 Showing {showingFrom}–{showingTo} of {filteredLength} {filteredLength === 1 ? 'flow' : 'flows'}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={page <= 1 || isLoading}
-                  className="px-4 py-2 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+                  className="px-3 sm:px-4 py-2 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors whitespace-nowrap"
                 >
                   Previous
                 </button>
-                <span className="text-sm font-semibold text-slate-500">Page {page} of {totalPages}</span>
+                <span className="text-sm font-semibold text-slate-500 whitespace-nowrap">Page {page} of {totalPages}</span>
                 <button
                   type="button"
                   onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                   disabled={page >= totalPages || isLoading}
-                  className="px-4 py-2 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+                  className="px-3 sm:px-4 py-2 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors whitespace-nowrap"
                 >
                   Next
                 </button>

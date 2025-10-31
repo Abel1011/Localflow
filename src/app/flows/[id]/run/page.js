@@ -57,7 +57,7 @@ export default function RunFlowPage() {
   if (isLoading) {
     return (
       <MainLayout>
-  <div className="min-h-screen bg-linear-to-br from-white via-slate-50 to-white flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-slate-500 font-semibold">Loading flow...</div>
         </div>
       </MainLayout>
@@ -67,7 +67,7 @@ export default function RunFlowPage() {
   if (!flow) {
     return (
       <MainLayout>
-  <div className="min-h-screen bg-linear-to-br from-white via-slate-50 to-white flex flex-col items-center justify-center gap-6 text-center px-6">
+        <div className="min-h-screen flex flex-col items-center justify-center gap-6 text-center px-6">
           <div className="text-slate-500 font-semibold">We could not find that flow.</div>
           <button
             type="button"
@@ -88,8 +88,8 @@ export default function RunFlowPage() {
 
   return (
     <MainLayout>
-  <div className="min-h-screen bg-linear-to-br from-white via-slate-50 to-white py-10">
-        <div className="max-w-6xl mx-auto px-6">
+      <div className="py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <BulkFlowRunner flow={flow} />
         </div>
       </div>

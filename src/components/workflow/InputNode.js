@@ -63,7 +63,7 @@ export default function InputNode({ id, data, selected }) {
       </div>
       <div className="p-4">
         <textarea
-          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none"
+          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none nodrag nopan"
           placeholder="Enter your input text..."
           rows={9}
           value={data?.text || ''}

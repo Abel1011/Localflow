@@ -96,7 +96,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate, allNodes }) {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Shared Context</label>
               <textarea
-                className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 resize-none nodrag nopan"
                 placeholder="Additional context for writing..."
                 rows={3}
                 value={node.data.sharedContext || ''}
@@ -136,7 +136,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate, allNodes }) {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Shared Context</label>
               <textarea
-                className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
+                className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none nodrag nopan"
                 placeholder="Additional context for rewriting..."
                 rows={3}
                 value={node.data.sharedContext || ''}
@@ -199,7 +199,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate, allNodes }) {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Shared Context</label>
               <textarea
-                className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
+                className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none nodrag nopan"
                 placeholder="Additional context for summary..."
                 rows={3}
                 value={node.data.sharedContext || ''}
@@ -216,7 +216,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate, allNodes }) {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">System Prompt</label>
               <textarea
-                className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none nodrag nopan"
                 placeholder="You are a helpful assistant..."
                 rows={4}
                 value={node.data.systemPrompt || ''}

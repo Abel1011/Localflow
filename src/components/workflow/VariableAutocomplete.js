@@ -14,6 +14,7 @@ export default function VariableAutocomplete({
   const textareaRef = useRef(null);
   const selectionRef = useRef({ start: 0, end: 0 });
   const shouldRestoreSelectionRef = useRef(false);
+  const pendingScrollRef = useRef(null);
 
   const handleInput = (e) => {
     const newValue = e.target.value;
@@ -22,6 +23,7 @@ export default function VariableAutocomplete({
 
     selectionRef.current = { start: selectionStart, end: selectionEnd };
     shouldRestoreSelectionRef.current = true;
+    pendingScrollRef.current = e.target.scrollTop;
     onChange(newValue);
 
     const textBeforeCursor = newValue.substring(0, selectionStart);
@@ -61,6 +63,7 @@ export default function VariableAutocomplete({
     onChange(newText);
     selectionRef.current = { start: newCursorPos, end: newCursorPos };
     shouldRestoreSelectionRef.current = true;
+    pendingScrollRef.current = textarea.scrollTop;
     setShowSuggestions(false);
 
     requestAnimationFrame(() => {
@@ -70,6 +73,9 @@ export default function VariableAutocomplete({
       }
       node.focus();
       node.setSelectionRange(newCursorPos, newCursorPos);
+      if (pendingScrollRef.current !== null) {
+        node.scrollTop = pendingScrollRef.current;
+      }
     });
   };
 
@@ -98,6 +104,10 @@ export default function VariableAutocomplete({
 
     selectionRef.current = { start: clampedStart, end: clampedEnd };
     textarea.setSelectionRange(clampedStart, clampedEnd);
+    if (pendingScrollRef.current !== null) {
+      textarea.scrollTop = pendingScrollRef.current;
+      pendingScrollRef.current = null;
+    }
   }, [value]);
 
   useEffect(() => {
@@ -115,7 +125,7 @@ export default function VariableAutocomplete({
     <div className="relative">
       <textarea
         ref={textareaRef}
-        className={className}
+        className={[className, 'nodrag', 'nopan'].filter(Boolean).join(' ')}
         placeholder={placeholder}
         rows={rows}
         value={typeof value === 'string' ? value : ''}

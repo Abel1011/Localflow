@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
-import { Play, Trash2, RefreshCw, UploadCloud, Loader2, FileDown, FileUp, X } from 'lucide-react';
+import { Play, Trash2, RefreshCw, UploadCloud, Loader2, FileDown, FileUp, X, Pencil, Info, AlertCircle, Copy, Check } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import Alert from '@/components/ui/Alert';
 import Toast from '@/components/ui/Toast';
 import { executeWorkflow, getExecutionOrder } from '@/lib/workflowEngine';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -306,9 +308,22 @@ export default function BulkFlowRunner({ flow }) {
   const [isImporting, setIsImporting] = useState(false);
   const [bulkModal, setBulkModal] = useState(null);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [copiedCells, setCopiedCells] = useState(new Set());
   const rowIdRef = useRef(1);
   const csvInputRef = useRef(null);
   const bulkFileInputRef = useRef(null);
+  const tableScrollRef = useRef(null);
+  const dragStateRef = useRef({
+    pointerId: null,
+    isActive: false,
+    hasStarted: false,
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0
+  });
+  const [isDraggingTable, setIsDraggingTable] = useState(false);
+  const router = useRouter();
+  const flowId = typeof flow?.id === 'number' ? flow.id : null;
 
   const executionData = useMemo(() => {
     if (!flow?.nodes || flow.nodes.length === 0) {
@@ -364,6 +379,104 @@ export default function BulkFlowRunner({ flow }) {
       ),
     [resultNodes, rows]
   );
+
+  const handleEditFlow = useCallback(() => {
+    if (flowId === null) {
+      return;
+    }
+    router.push(`/flows/${flowId}/edit`);
+  }, [flowId, router]);
+
+  const handleCopyResult = useCallback(async (rowId, nodeName, text) => {
+    if (!text) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      const cellKey = `${rowId}-${nodeName}`;
+      setCopiedCells((prev) => new Set(prev).add(cellKey));
+      setTimeout(() => {
+        setCopiedCells((prev) => {
+          const next = new Set(prev);
+          next.delete(cellKey);
+          return next;
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      setToast({ message: 'Failed to copy to clipboard.', type: 'error' });
+    }
+  }, []);
+
+  const handleTablePointerDown = useCallback((event) => {
+    const container = tableScrollRef.current;
+    if (!container) {
+      return;
+    }
+    if (event.button !== 0 && event.pointerType !== 'touch') {
+      return;
+    }
+    if (event.target.closest('textarea, input, button, select, a, label, [data-no-drag-scroll]')) {
+      return;
+    }
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      isActive: true,
+      hasStarted: false,
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: container.scrollLeft
+    };
+  }, []);
+
+  const handleTablePointerMove = useCallback((event) => {
+    const container = tableScrollRef.current;
+    const state = dragStateRef.current;
+    if (!container || !state.isActive) {
+      return;
+    }
+    const deltaX = event.clientX - state.startX;
+    const deltaY = event.clientY - state.startY;
+    if (!state.hasStarted) {
+      if (Math.abs(deltaX) < 4 || Math.abs(deltaX) < Math.abs(deltaY)) {
+        return;
+      }
+      state.hasStarted = true;
+      setIsDraggingTable(true);
+      if (typeof container.setPointerCapture === 'function') {
+        try {
+          container.setPointerCapture(state.pointerId);
+        } catch (_error) {}
+      }
+    }
+    container.scrollLeft = state.scrollLeft - deltaX;
+    event.preventDefault();
+  }, []);
+
+  const handleTablePointerEnd = useCallback((event) => {
+    const container = tableScrollRef.current;
+    const state = dragStateRef.current;
+    if (!state.isActive) {
+      return;
+    }
+    if (state.hasStarted && container && typeof container.releasePointerCapture === 'function') {
+      try {
+        container.releasePointerCapture(state.pointerId);
+      } catch (_error) {}
+    }
+    if (state.hasStarted && event && typeof event.preventDefault === 'function') {
+      event.preventDefault();
+    }
+    dragStateRef.current = {
+      pointerId: null,
+      isActive: false,
+      hasStarted: false,
+      startX: 0,
+      startY: 0,
+      scrollLeft: container ? container.scrollLeft : 0
+    };
+    setIsDraggingTable(false);
+  }, []);
 
   const textInputNodes = useMemo(
     () => inputNodes.filter((node) => TEXT_INPUT_TYPES.has(node.type)),
@@ -1351,7 +1464,7 @@ export default function BulkFlowRunner({ flow }) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="w-full space-y-8">
       <input
         ref={csvInputRef}
         type="file"
@@ -1367,94 +1480,140 @@ export default function BulkFlowRunner({ flow }) {
         multiple
         onChange={handleBulkFilesSelected}
       />
+      
       <Card gradient className="shadow-xl">
-        <div className="space-y-8">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-slate-900">Bulk run: {flow?.name || 'Untitled flow'}</h1>
+        <div className="flex items-center gap-4 mb-6">
+          <div 
+            className="flex items-center justify-center w-14 h-14 rounded-2xl shadow-lg"
+            style={{
+              background: 'linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #0ea5e9 100%)',
+            }}
+          >
+            <Play className="w-7 h-7 text-white" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-slate-900 mb-1">
+              {flow?.name || 'Untitled flow'}
+            </h1>
             {flow?.description ? (
-              <p className="text-sm text-slate-500 max-w-3xl leading-relaxed">{flow.description}</p>
+              <p className="text-sm text-slate-600 leading-relaxed">{flow.description}</p>
             ) : (
-              <p className="text-sm text-slate-400">No description provided.</p>
+              <p className="text-sm text-slate-400">No description provided</p>
             )}
-            {orderError && (
-              <p className="text-sm text-rose-600">{orderError}</p>
-            )}
-          </div>
-          <div className="w-full p-5 bg-amber-50 border border-amber-200 rounded-2xl shadow-inner">
-            <p className="text-xs font-semibold text-amber-700 tracking-wide uppercase">Important</p>
-            <p className="text-sm text-amber-600 mt-2 leading-relaxed">
-              Do not close or reload this page while bulk runs are active. Download your results as soon as processing finishes; they are not stored automatically.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <div className="flex items-center justify-between gap-3 px-4 py-4 border-2 border-slate-200 rounded-2xl bg-slate-50 sm:col-span-2 xl:col-span-2">
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold uppercase text-slate-500 tracking-wide">Rows</span>
-                <span className="text-[11px] text-slate-400">Max {MAX_BULK_ROWS}</span>
-              </div>
-              <input
-                type="number"
-                min={1}
-                max={MAX_BULK_ROWS}
-                value={rows.length}
-                onChange={handleRowCountInput}
-                disabled={isRunning}
-                aria-label="Row count"
-                className="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 disabled:bg-slate-100"
-              />
-            </div>
-            <Button
-              onClick={handleDownloadTemplate}
-              variant="ghost"
-              icon={FileDown}
-              disabled={isRunning || textInputNodes.length === 0}
-              className="w-full justify-start text-left px-5"
-            >
-              Download input template
-            </Button>
-            <Button
-              onClick={handleDownloadResults}
-              variant="ghost"
-              icon={FileDown}
-              disabled={isRunning || !hasDownloadableResults}
-              className="w-full justify-start text-left px-5"
-            >
-              Download results CSV
-            </Button>
-            <Button
-              onClick={handleUploadRequest}
-              variant="ghost"
-              icon={FileUp}
-              disabled={isRunning || textInputNodes.length === 0}
-              isLoading={isImporting}
-              className="w-full justify-start text-left px-5"
-            >
-              {isImporting ? 'Importing...' : 'Import CSV'}
-            </Button>
-            <Button
-              onClick={handleClearResults}
-              variant="ghost"
-              icon={RefreshCw}
-              disabled={isRunning || rows.length === 0}
-              className="w-full justify-start text-left px-5"
-            >
-              Clear results
-            </Button>
-            <Button
-              onClick={handleRunAll}
-              variant="primary"
-              icon={Play}
-              isLoading={isRunning}
-              disabled={isRunning || rows.length === 0 || Boolean(orderError)}
-              className="w-full justify-center sm:col-span-2 xl:col-span-2"
-            >
-              {isRunning ? 'Running...' : 'Run all rows'}
-            </Button>
           </div>
         </div>
+
+        {orderError && (
+          <Alert type="error" icon={AlertCircle} title="Execution order error">
+            <p className="text-sm">{orderError}</p>
+          </Alert>
+        )}
+
+        {!orderError && (
+          <>
+            <div className="bg-linear-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-5 mb-6">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">Important</p>
+                  <p className="text-sm text-amber-700 leading-relaxed">
+                    Do not close or reload this page while bulk runs are active. Download your results as soon as processing finishes; they are not stored automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center justify-between gap-3 px-4 py-3.5 border-2 border-slate-200 rounded-2xl bg-slate-50 w-full sm:w-auto sm:min-w-[200px]">
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold uppercase text-slate-500 tracking-wide">Rows</span>
+                  <span className="text-[11px] text-slate-400">Max {MAX_BULK_ROWS}</span>
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  max={MAX_BULK_ROWS}
+                  value={rows.length}
+                  onChange={handleRowCountInput}
+                  disabled={isRunning}
+                  aria-label="Row count"
+                  className="w-20 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 disabled:bg-slate-100"
+                />
+              </div>
+              <Button
+                onClick={handleDownloadTemplate}
+                variant="ghost"
+                icon={FileDown}
+                disabled={isRunning || textInputNodes.length === 0}
+                className="flex-1 sm:flex-none whitespace-nowrap"
+              >
+                Template
+              </Button>
+              <Button
+                onClick={handleDownloadResults}
+                variant="ghost"
+                icon={FileDown}
+                disabled={isRunning || !hasDownloadableResults}
+                className="flex-1 sm:flex-none whitespace-nowrap"
+              >
+                Results
+              </Button>
+              <Button
+                onClick={handleUploadRequest}
+                variant="ghost"
+                icon={FileUp}
+                disabled={isRunning || textInputNodes.length === 0}
+                isLoading={isImporting}
+                className="flex-1 sm:flex-none whitespace-nowrap"
+              >
+                {isImporting ? 'Importing...' : 'Import'}
+              </Button>
+              <Button
+                onClick={handleClearResults}
+                variant="ghost"
+                icon={RefreshCw}
+                disabled={isRunning || rows.length === 0}
+                className="flex-1 sm:flex-none whitespace-nowrap"
+              >
+                Clear
+              </Button>
+              <div className="w-full sm:flex-1 sm:min-w-[200px] flex gap-3">
+                <Button
+                  onClick={handleEditFlow}
+                  variant="secondary"
+                  icon={Pencil}
+                  disabled={isRunning || flowId === null}
+                  className="flex-1 justify-center whitespace-nowrap"
+                >
+                  Edit flow
+                </Button>
+                <Button
+                  onClick={handleRunAll}
+                  variant="primary"
+                  icon={Play}
+                  isLoading={isRunning}
+                  disabled={isRunning || rows.length === 0 || Boolean(orderError)}
+                  className="flex-1 justify-center whitespace-nowrap"
+                >
+                  {isRunning ? 'Running...' : 'Run all'}
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </Card>
 
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm overflow-x-auto">
+      <Card className="overflow-hidden">
+        <div
+          ref={tableScrollRef}
+          className="overflow-x-auto"
+          onPointerDown={handleTablePointerDown}
+          onPointerMove={handleTablePointerMove}
+          onPointerUp={handleTablePointerEnd}
+          onPointerLeave={handleTablePointerEnd}
+          onPointerCancel={handleTablePointerEnd}
+          style={isDraggingTable ? { cursor: 'grabbing' } : undefined}
+        >
         <table className="w-full text-left min-w-[960px]">
           <thead>
             <tr className="text-xs uppercase tracking-wide text-slate-500">
@@ -1512,7 +1671,7 @@ export default function BulkFlowRunner({ flow }) {
                           onChange={(event) => handleTextChange(row.id, nodeId, event.target.value)}
                           disabled={isRunning}
                           rows={4}
-                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 resize-none"
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 resize-none min-w-[150px]"
                           placeholder={`Enter text for ${nodeName}`}
                         />
                       </td>
@@ -1669,8 +1828,10 @@ export default function BulkFlowRunner({ flow }) {
                 {resultNodes.map((node) => {
                   const nodeName = node.data?.name || node.id;
                   const result = row.results[nodeName];
+                  const cellKey = `${row.id}-${nodeName}`;
+                  const isCopied = copiedCells.has(cellKey);
                   return (
-                    <td key={nodeName} className="py-3 pr-4 text-sm text-slate-600">
+                    <td key={nodeName} className="py-3 pr-4 text-sm text-slate-600 min-x-[150px]">
                       {result ? (
                         <div className="space-y-2">
                           <span
@@ -1681,11 +1842,25 @@ export default function BulkFlowRunner({ flow }) {
                           {result.error ? (
                             <p className="text-xs text-rose-600 leading-relaxed">{result.error}</p>
                           ) : result.text ? (
-                            <div
-                              className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3 whitespace-pre-wrap max-h-40 overflow-y-auto"
-                              title={result.text}
-                            >
-                              {truncateText(result.text)}
+                            <div className="relative group">
+                              <div
+                                className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3 whitespace-pre-wrap max-h-32 overflow-y-auto"
+                                title={result.text}
+                              >
+                                {result.text}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyResult(row.id, nodeName, result.text)}
+                                className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-white hover:text-teal-600 hover:border-teal-300 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
+                                title="Copy to clipboard"
+                              >
+                                {isCopied ? (
+                                  <Check className="w-3.5 h-3.5 text-teal-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
                             </div>
                           ) : (
                             <p className="text-xs text-slate-400">Waiting for output...</p>
@@ -1738,7 +1913,8 @@ export default function BulkFlowRunner({ flow }) {
             ))}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Card>
 
       {bulkModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center px-4 py-6 bg-slate-900/60 backdrop-blur-sm">
