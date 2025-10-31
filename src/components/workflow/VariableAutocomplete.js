@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 
 export default function VariableAutocomplete({ 
   value, 
@@ -11,18 +11,20 @@ export default function VariableAutocomplete({
   className 
 }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
   const textareaRef = useRef(null);
+  const selectionRef = useRef({ start: 0, end: 0 });
+  const shouldRestoreSelectionRef = useRef(false);
 
   const handleInput = (e) => {
     const newValue = e.target.value;
-    const cursorPos = e.target.selectionStart;
-    
-    onChange(newValue);
-    setCursorPosition(cursorPos);
+    const selectionStart = e.target.selectionStart ?? 0;
+    const selectionEnd = e.target.selectionEnd ?? selectionStart;
 
-    const textBeforeCursor = newValue.substring(0, cursorPos);
+    selectionRef.current = { start: selectionStart, end: selectionEnd };
+    shouldRestoreSelectionRef.current = true;
+    onChange(newValue);
+
+    const textBeforeCursor = newValue.substring(0, selectionStart);
     const lastOpenBrace = textBeforeCursor.lastIndexOf('{{');
     const lastCloseBrace = textBeforeCursor.lastIndexOf('}}');
 
@@ -35,26 +37,40 @@ export default function VariableAutocomplete({
 
   const insertVariable = (variableName) => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) {
+      return;
+    }
 
-    const textBeforeCursor = value.substring(0, cursorPosition);
-    const textAfterCursor = value.substring(cursorPosition);
-    
+    const sourceValue = typeof value === 'string' ? value : '';
+    const { start, end } = selectionRef.current;
+    const textBeforeCursor = sourceValue.substring(0, start);
     const lastOpenBrace = textBeforeCursor.lastIndexOf('{{');
-    
+
+    if (lastOpenBrace === -1) {
+      setShowSuggestions(false);
+      return;
+    }
+
     const newText = 
-      value.substring(0, lastOpenBrace) + 
+      sourceValue.substring(0, lastOpenBrace) + 
       `{{${variableName}}}` + 
-      textAfterCursor;
-    
+      sourceValue.substring(end);
+
+    const newCursorPos = lastOpenBrace + variableName.length + 4;
+
     onChange(newText);
+    selectionRef.current = { start: newCursorPos, end: newCursorPos };
+    shouldRestoreSelectionRef.current = true;
     setShowSuggestions(false);
-    
-    setTimeout(() => {
-      const newCursorPos = lastOpenBrace + variableName.length + 4;
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
+
+    requestAnimationFrame(() => {
+      const node = textareaRef.current;
+      if (!node) {
+        return;
+      }
+      node.focus();
+      node.setSelectionRange(newCursorPos, newCursorPos);
+    });
   };
 
   const handleKeyDown = (e) => {
@@ -63,6 +79,26 @@ export default function VariableAutocomplete({
       e.preventDefault();
     }
   };
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !shouldRestoreSelectionRef.current) {
+      return;
+    }
+    if (document.activeElement !== textarea) {
+      return;
+    }
+
+    shouldRestoreSelectionRef.current = false;
+
+    const length = textarea.value.length;
+    const { start, end } = selectionRef.current;
+    const clampedStart = Math.min(start, length);
+    const clampedEnd = Math.min(end, length);
+
+    selectionRef.current = { start: clampedStart, end: clampedEnd };
+    textarea.setSelectionRange(clampedStart, clampedEnd);
+  }, [value]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -82,7 +118,7 @@ export default function VariableAutocomplete({
         className={className}
         placeholder={placeholder}
         rows={rows}
-        value={value}
+        value={typeof value === 'string' ? value : ''}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
       />

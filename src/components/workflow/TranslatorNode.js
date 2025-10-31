@@ -77,7 +77,7 @@ export default function TranslatorNode({ id, data, selected }) {
           value={data.text || ''}
           onChange={(value) => data.onChange?.(id, 'text', value)}
           placeholder="Text to translate..."
-          rows={3}
+          rows={9}
           availableVariables={data.availableVariables || []}
           className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
         />

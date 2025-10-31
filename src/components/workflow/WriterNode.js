@@ -77,7 +77,7 @@ export default function WriterNode({ id, data, selected }) {
           value={data.context || ''}
           onChange={(value) => data.onChange?.(id, 'context', value)}
           placeholder="Use {{Node Name}} to reference other nodes..."
-          rows={3}
+          rows={9}
           availableVariables={data.availableVariables || []}
           className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
         />
