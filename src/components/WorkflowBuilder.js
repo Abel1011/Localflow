@@ -901,7 +901,7 @@ export default function FlowBuilder({
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4">
+        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-4">
           <Toast
             message={toast.message}
             type={toast.type}

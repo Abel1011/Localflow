@@ -2096,7 +2096,7 @@ export default function BulkFlowRunner({ flow }) {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed top-6 right-6 z-50">
           <Toast message={toast.message} type={toast.type} onClose={closeToast} />
         </div>
       )}

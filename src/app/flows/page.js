@@ -280,7 +280,7 @@ export default function FlowsPage() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 right-6">
+        <div className="fixed top-6 right-6">
           <Toast message={toast.message} type={toast.type} onClose={handleToastClose} />
         </div>
       )}
