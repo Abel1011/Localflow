@@ -6,8 +6,9 @@ import MainLayout from '@/components/MainLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Toast from '@/components/ui/Toast';
-import { getAllFlows, deleteFlow } from '@/lib/workflowStorage';
-import { Plus, Search, Pencil, Trash2, Play, Workflow } from 'lucide-react';
+import { getAllFlows, deleteFlow, loadSampleFlows } from '@/lib/workflowStorage';
+import { sampleFlows } from '@/lib/sampleFlows';
+import { Plus, Search, Pencil, Trash2, Play, Workflow, Download } from 'lucide-react';
 
 const PAGE_SIZE = 6;
 
@@ -94,6 +95,23 @@ export default function FlowsPage() {
     }
   };
 
+  const handleLoadSamples = async () => {
+    const confirmed = window.confirm('Load 3 sample flows? These will be added to your library.');
+    if (!confirmed) {
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const loaded = await loadSampleFlows(sampleFlows);
+      setFlows((current) => [...current, ...loaded]);
+      setToast({ message: `${loaded.length} sample flows loaded successfully!`, type: 'success' });
+    } catch (error) {
+      setToast({ message: error?.message || 'Failed to load sample flows.', type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleToastClose = () => {
     setToast(null);
   };
@@ -118,13 +136,35 @@ export default function FlowsPage() {
                   Manage every Flow locally without leaving the browser. Organize, edit, and execute workflows with the same polished experience as the playground tools.
                 </p>
               </div>
-              <Link href="/flows/new" className="hidden sm:inline-flex">
-                <Button icon={Plus} className="whitespace-nowrap">New Flow</Button>
+              <div className="hidden sm:flex gap-2">
+                <Button 
+                  onClick={handleLoadSamples} 
+                  variant="secondary" 
+                  icon={Download} 
+                  className="whitespace-nowrap"
+                  disabled={isLoading}
+                >
+                  Load Samples
+                </Button>
+                <Link href="/flows/new">
+                  <Button icon={Plus} className="whitespace-nowrap">New Flow</Button>
+                </Link>
+              </div>
+            </div>
+            <div className="sm:hidden flex flex-col gap-2">
+              <Button 
+                onClick={handleLoadSamples} 
+                variant="secondary" 
+                icon={Download} 
+                className="w-full justify-center"
+                disabled={isLoading}
+              >
+                Load Sample Flows
+              </Button>
+              <Link href="/flows/new" className="w-full">
+                <Button icon={Plus} className="w-full justify-center">New Flow</Button>
               </Link>
             </div>
-            <Link href="/flows/new" className="sm:hidden w-full">
-              <Button icon={Plus} className="w-full justify-center">New Flow</Button>
-            </Link>
           </Card>
 
           <Card className="shadow-xl">

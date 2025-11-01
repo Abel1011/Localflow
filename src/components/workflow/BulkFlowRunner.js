@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
-import { Play, Trash2, RefreshCw, UploadCloud, Loader2, FileDown, FileUp, X, Pencil, Info, AlertCircle, Copy, Check } from 'lucide-react';
+import { marked } from 'marked';
+import { Play, Trash2, RefreshCw, UploadCloud, Loader2, FileDown, FileUp, X, Pencil, Info, AlertCircle, Copy, Check, Eye } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Alert from '@/components/ui/Alert';
@@ -309,6 +310,7 @@ export default function BulkFlowRunner({ flow }) {
   const [bulkModal, setBulkModal] = useState(null);
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [copiedCells, setCopiedCells] = useState(new Set());
+  const [previewModal, setPreviewModal] = useState(null);
   const rowIdRef = useRef(1);
   const csvInputRef = useRef(null);
   const bulkFileInputRef = useRef(null);
@@ -406,6 +408,17 @@ export default function BulkFlowRunner({ flow }) {
       console.error('Failed to copy to clipboard:', error);
       setToast({ message: 'Failed to copy to clipboard.', type: 'error' });
     }
+  }, []);
+
+  const handleOpenPreview = useCallback((nodeName, text) => {
+    if (!text) {
+      return;
+    }
+    setPreviewModal({ nodeName, text });
+  }, []);
+
+  const handleClosePreview = useCallback(() => {
+    setPreviewModal(null);
   }, []);
 
   const handleTablePointerDown = useCallback((event) => {
@@ -1849,18 +1862,28 @@ export default function BulkFlowRunner({ flow }) {
                               >
                                 {result.text}
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyResult(row.id, nodeName, result.text)}
-                                className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-white hover:text-teal-600 hover:border-teal-300 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
-                                title="Copy to clipboard"
-                              >
-                                {isCopied ? (
-                                  <Check className="w-3.5 h-3.5 text-teal-600" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5" />
-                                )}
-                              </button>
+                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenPreview(nodeName, result.text)}
+                                  className="p-1.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-white hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm"
+                                  title="View full content"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyResult(row.id, nodeName, result.text)}
+                                  className="p-1.5 rounded-lg bg-white/90 border border-slate-200 text-slate-600 hover:bg-white hover:text-teal-600 hover:border-teal-300 transition-all shadow-sm"
+                                  title="Copy to clipboard"
+                                >
+                                  {isCopied ? (
+                                    <Check className="w-3.5 h-3.5 text-teal-600" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <p className="text-xs text-slate-400">Waiting for output...</p>
@@ -2014,6 +2037,58 @@ export default function BulkFlowRunner({ flow }) {
                 className="min-w-32 justify-center"
               >
                 {bulkProcessing ? 'Applying...' : 'Apply files'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-4xl bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between gap-4 p-6 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center justify-center w-10 h-10 rounded-xl shadow-md"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  }}
+                >
+                  <Eye className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">{previewModal.nodeName}</h2>
+                  <p className="text-sm text-slate-500">Full content preview</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleClosePreview}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-full transition"
+                aria-label="Close preview"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <div 
+                className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-teal-600 prose-strong:text-slate-900 prose-code:text-slate-800 prose-pre:bg-slate-900 prose-pre:text-slate-100"
+                dangerouslySetInnerHTML={{ __html: marked(previewModal.text) }}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 bg-slate-50">
+              <Button
+                onClick={() => handleCopyResult(null, previewModal.nodeName, previewModal.text)}
+                variant="secondary"
+                icon={Copy}
+              >
+                Copy to clipboard
+              </Button>
+              <Button
+                onClick={handleClosePreview}
+                variant="primary"
+              >
+                Close
               </Button>
             </div>
           </div>

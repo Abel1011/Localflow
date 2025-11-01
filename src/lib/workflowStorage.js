@@ -167,3 +167,47 @@ export const deleteFlow = async id => {
     };
   });
 };
+
+export const loadSampleFlows = async (sampleFlows) => {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    const timestamp = Date.now();
+    const loadedFlows = [];
+    let processed = 0;
+    
+    sampleFlows.forEach((flow) => {
+      const payload = {
+        name: flow.name?.trim() || 'Untitled flow',
+        description: flow.description?.trim() || '',
+        nodes: Array.isArray(flow.nodes) ? flow.nodes : [],
+        edges: Array.isArray(flow.edges) ? flow.edges : [],
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+
+      const request = store.add(payload);
+
+      request.onsuccess = () => {
+        loadedFlows.push({ ...payload, id: request.result });
+        processed++;
+        if (processed === sampleFlows.length) {
+          resolve(loadedFlows);
+        }
+      };
+
+      request.onerror = () => {
+        processed++;
+        if (processed === sampleFlows.length) {
+          if (loadedFlows.length > 0) {
+            resolve(loadedFlows);
+          } else {
+            reject(request.error || new Error('Failed to load sample flows.'));
+          }
+        }
+      };
+    });
+  });
+};
